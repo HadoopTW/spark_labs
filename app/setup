@@ -15,9 +15,16 @@ add-apt-repository ppa:webupd8team/java
 apt-get update
 ##----------------------------------------------------------------------------
 ## FIX warning about 'missing apt-utils'
-apt-get -y install apt-utils git openssh-server net-tool wget ca-certificates
+apt-get -y install apt-utils git openssh-server net-tool wget ca-certificates gdebi-core
 ## install sbt
 apt-get -y install --force-yes sbt
+## install octave
+apt-get -y install octive
+## install R
+apt-get -y install r-base
+## install RStudio Server
+wget https://download2.rstudio.org/rstudio-server-0.99.473-amd64.deb
+gdebi rstudio-server-0.99.473-amd64.deb
 ## install Oracle JDK 8
 ### Reference: http://tecadmin.net/install-oracle-java-8-jdk-8-ubuntu-via-ppa/
 cat << EOF | /usr/bin/debconf-set-selections
