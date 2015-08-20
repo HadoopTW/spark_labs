@@ -1,0 +1,59 @@
+#!/bin/bash
+## setup sbt repository
+echo "deb http://dl.bintray.com/sbt/debian /" > /etc/apt/sources.list.d/sbt.list
+## setup sbt repository GPG key
+gpg --keyserver subkeys.pgp.net --recv-key 99E82A75642AC823
+gpg -a --export 642AC823 | apt-key add -
+## setup CDH5 and CM5 repository GPG Key
+wget -O - http://archive.cloudera.com/cdh5/ubuntu/trusty/amd64/cdh/archive.key | apt-key add -
+## setup Oracle JDK 8 repository
+if [ ! -x /usr/bin/add-apt-repository ]; then
+  apt-get -y install python-software-properties
+fi
+add-apt-repository ppa:webupd8team/java
+## update APT repositories
+apt-get update
+##----------------------------------------------------------------------------
+## FIX warning about 'missing apt-utils'
+apt-get -y install apt-utils git openssh-server net-tool wget ca-certificates
+## install sbt
+apt-get -y install --force-yes sbt
+## install Oracle JDK 8
+### Reference: http://tecadmin.net/install-oracle-java-8-jdk-8-ubuntu-via-ppa/
+cat << EOF | /usr/bin/debconf-set-selections
+oracle-java8-installer	shared/accepted-oracle-license-v1-1 boolean true
+EOF
+yes | apt-get -y install --force-yes oracle-java8-installer oracle-java8-set-default
+## install scala 2.10.5
+###  scala : Depends: openjdk-6-jre but it is not going to be installed or
+###                   java6-runtime
+###          Depends: libjansi-java but it is not going to be installed
+apt-get -y install openjdk-6-jre libjansi-java
+wget http://downloads.typesafe.com/scala/2.10.5/scala-2.10.5.deb
+dpkg -i scala-2.10.5.deb
+## install puppet
+if [ ! -f /usr/bin/puppet ]; then
+  apt-get -y install puppetmaster puppet
+fi
+## install puppet-cloudera module
+puppet module install razorsedge/cloudera --verbose --debug
+sed -i 's#::fqdn#::hostname#' /etc/puppet/modules/cloudera/templates/scm-config.ini.erb
+## install Hadoop, Hive, Hue
+cat << EOF > site.pp
+class { '::cloudera::cdh5::repo': }   ->
+class { '::cloudera::cdh5::hadoop': } ->
+class { '::cloudera::cdh5::hive': }   ->
+class { '::cloudera::cdh5::hue': }
+EOF
+puppet apply --verbose --debug site.pp
+apt-get -y install hadoop-conf-pseudo
+/etc/init.d/hadoop-hdfs-namenode init
+## install Jupyterhub
+apt-get -y install npm nodejs-legacy python3-pip
+npm install -g configurable-http-proxy
+pip3 install jupyterhub ipython[notebook]
+### SSH key exchange
+mkdir -p /root/.ssh
+ssh-keygen -P "" -t rsa -f /root/.ssh/id_rsa
+cat /root/.ssh/id_rsa.pub >> /root/.ssh/authorized_keys
+sed -i 's#\#   StrictHostKeyChecking ask#    StrictHostKeyChecking no#g' /etc/ssh/ssh_config
