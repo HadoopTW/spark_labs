@@ -15,22 +15,27 @@ add-apt-repository ppa:webupd8team/java
 apt-get update
 ##----------------------------------------------------------------------------
 ## FIX warning about 'missing apt-utils'
-apt-get -y install apt-utils git openssh-server net-tool wget ca-certificates gdebi-core
+apt-get -y install apt-utils git openssh-server net-tool wget ca-certificates
 ## install sbt
 apt-get -y install --force-yes sbt
 ## install octave
 apt-get -y install octive
 ## install R
-apt-get -y install r-base
 ## install RStudio Server
+### Package: rstudio-server
+### Depends: psmisc, libapparmor1, libedit2, libc6 (>= 2.7)
+### Recommends: r-base (>= 2.11.1)
+apt-get -y install r-base psmisc libapparmor1 libedit2 libc6
 wget https://download2.rstudio.org/rstudio-server-0.99.473-amd64.deb
-gdebi rstudio-server-0.99.473-amd64.deb
+dpkg -i rstudio-server-0.99.473-amd64.deb
+## install shellinabox (web-based terminal)
+apt-get -y install shellinabox
 ## install Oracle JDK 8
 ### Reference: http://tecadmin.net/install-oracle-java-8-jdk-8-ubuntu-via-ppa/
 cat << EOF | /usr/bin/debconf-set-selections
 oracle-java8-installer	shared/accepted-oracle-license-v1-1 boolean true
 EOF
-yes | apt-get -y install --force-yes oracle-java8-installer oracle-java8-set-default
+apt-get -y install --force-yes oracle-java8-installer oracle-java8-set-default
 ## install scala 2.10.5
 ###  scala : Depends: openjdk-6-jre but it is not going to be installed or
 ###                   java6-runtime
@@ -50,6 +55,7 @@ cat << EOF > site.pp
 class { '::cloudera::cdh5::repo': }   ->
 class { '::cloudera::cdh5::hadoop': } ->
 class { '::cloudera::cdh5::hive': }   ->
+class { '::cloudera::cdh5::hive::metastore': }   ->
 class { '::cloudera::cdh5::hue': }
 EOF
 puppet apply --verbose --debug site.pp
