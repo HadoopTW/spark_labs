@@ -7,15 +7,12 @@ gpg -a --export 642AC823 | apt-key add -
 ## setup CDH5 and CM5 repository GPG Key
 wget -O - http://archive.cloudera.com/cdh5/ubuntu/trusty/amd64/cdh/archive.key | apt-key add -
 ## setup Oracle JDK 8 repository
-if [ ! -x /usr/bin/add-apt-repository ]; then
-  apt-get -y install python-software-properties
-fi
-add-apt-repository ppa:webupd8team/java
+echo "deb http://ppa.launchpad.net/webupd8team/java/ubuntu trusty main" > /etc/apt/sources.list.d/webupd8team-java-trusty.list
 ## update APT repositories
 apt-get update
 ##----------------------------------------------------------------------------
 ## FIX warning about 'missing apt-utils'
-apt-get -y install apt-utils git openssh-server net-tool wget ca-certificates
+apt-get -y install apt-utils git openssh-server wget ca-certificates
 ## install sbt
 apt-get -y install --force-yes sbt
 ## install octave
@@ -32,10 +29,12 @@ dpkg -i rstudio-server-0.99.473-amd64.deb
 apt-get -y install shellinabox
 ## install Oracle JDK 8
 ### Reference: http://tecadmin.net/install-oracle-java-8-jdk-8-ubuntu-via-ppa/
-cat << EOF | /usr/bin/debconf-set-selections
+if [ ! -d /usr/lib/jvm/java-8-oracle ]; then
+  cat << EOF | /usr/bin/debconf-set-selections
 oracle-java8-installer	shared/accepted-oracle-license-v1-1 boolean true
 EOF
-apt-get -y install --force-yes oracle-java8-installer oracle-java8-set-default
+  apt-get -y install --force-yes oracle-java8-installer oracle-java8-set-default
+fi
 ## install scala 2.10.5
 ###  scala : Depends: openjdk-6-jre but it is not going to be installed or
 ###                   java6-runtime
