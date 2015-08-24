@@ -2,10 +2,9 @@
 ## setup sbt repository
 echo "deb http://dl.bintray.com/sbt/debian /" > /etc/apt/sources.list.d/sbt.list
 ## setup sbt repository GPG key
-gpg --keyserver subkeys.pgp.net --recv-key 99E82A75642AC823
-gpg -a --export 642AC823 | apt-key add -
+wget -O - "http://dl.bintray.com/sbt/debian/Release.gpg" | apt-key add -
 ## setup CDH5 and CM5 repository GPG Key
-wget -O - http://archive.cloudera.com/cdh5/ubuntu/trusty/amd64/cdh/archive.key | apt-key add -
+wget -O - "http://archive.cloudera.com/cdh5/ubuntu/trusty/amd64/cdh/archive.key" | apt-key add -
 ## setup Oracle JDK 8 repository
 echo "deb http://ppa.launchpad.net/webupd8team/java/ubuntu trusty main" > /etc/apt/sources.list.d/webupd8team-java-trusty.list
 ## update APT repositories
@@ -17,55 +16,73 @@ apt-get -y install apt-utils git openssh-server wget ca-certificates
 apt-get -y install --force-yes sbt
 ## install octave
 apt-get -y install octive
-## install R
-## install RStudio Server
+## install R and RStudio Server
 ### Package: rstudio-server
 ### Depends: psmisc, libapparmor1, libedit2, libc6 (>= 2.7)
 ### Recommends: r-base (>= 2.11.1)
-apt-get -y install r-base psmisc libapparmor1 libedit2 libc6
-wget https://download2.rstudio.org/rstudio-server-0.99.473-amd64.deb
-dpkg -i rstudio-server-0.99.473-amd64.deb
+if [ ! -f /usr/sbin/rstudio-server ]; then
+  apt-get -y install r-base psmisc libapparmor1 libedit2 libc6
+  wget https://download2.rstudio.org/rstudio-server-0.99.473-amd64.deb
+  dpkg -i rstudio-server-0.99.473-amd64.deb
+fi
 ## install shellinabox (web-based terminal)
-apt-get -y install shellinabox
+if [ ! -f /usr/bin/shellinaboxd ]; then
+  apt-get -y install shellinabox
+fi
 ## install Oracle JDK 8
 ### Reference: http://tecadmin.net/install-oracle-java-8-jdk-8-ubuntu-via-ppa/
-if [ ! -d /usr/lib/jvm/java-8-oracle ]; then
-  cat << EOF | /usr/bin/debconf-set-selections
-oracle-java8-installer	shared/accepted-oracle-license-v1-1 boolean true
-EOF
-  apt-get -y install --force-yes oracle-java8-installer oracle-java8-set-default
-fi
+#if [ ! -d /usr/lib/jvm/java-8-oracle ]; then
+#  cat << EOF | /usr/bin/debconf-set-selections
+#oracle-java8-installer	shared/accepted-oracle-license-v1-1 boolean true
+#EOF
+#  apt-get -y install --force-yes oracle-java8-installer oracle-java8-set-default
+#fi
 ## install scala 2.10.5
 ###  scala : Depends: openjdk-6-jre but it is not going to be installed or
 ###                   java6-runtime
 ###          Depends: libjansi-java but it is not going to be installed
-apt-get -y install openjdk-6-jre libjansi-java
-wget http://downloads.typesafe.com/scala/2.10.5/scala-2.10.5.deb
-dpkg -i scala-2.10.5.deb
+if [ ! -f /usr/bin/scala ]; then
+  apt-get -y install openjdk-6-jre libjansi-java
+  wget http://downloads.typesafe.com/scala/2.10.5/scala-2.10.5.deb
+  dpkg -i scala-2.10.5.deb
+fi
 ## install puppet
 if [ ! -f /usr/bin/puppet ]; then
   apt-get -y install puppetmaster puppet
 fi
 ## install puppet-cloudera module
-puppet module install razorsedge/cloudera --verbose --debug
-sed -i 's#::fqdn#::hostname#' /etc/puppet/modules/cloudera/templates/scm-config.ini.erb
+if [ ! -d /etc/puppet/modules/cloudera/ ]; then
+  puppet module install razorsedge/cloudera --verbose --debug
+  sed -i 's#::fqdn#::hostname#' /etc/puppet/modules/cloudera/templates/scm-config.ini.erb
+fi
 ## install Hadoop, Hive, Hue
 cat << EOF > site.pp
-class { '::cloudera::cdh5::repo': }   ->
+class { '::cloudera::cm5::repo': }    ->
 class { '::cloudera::cdh5::hadoop': } ->
 class { '::cloudera::cdh5::hive': }   ->
 class { '::cloudera::cdh5::hive::metastore': }   ->
 class { '::cloudera::cdh5::hue': }
 EOF
 puppet apply --verbose --debug site.pp
-apt-get -y install hadoop-conf-pseudo
-/etc/init.d/hadoop-hdfs-namenode init
+if [ ! -f /etc/hadoop/conf.pseudo/core-site.xml ]; then
+  apt-get -y install hadoop-conf-pseudo
+  /etc/init.d/hadoop-hdfs-namenode init
+  /etc/init.d/hadoop-hdfs-namenode start
+  /etc/init.d/hadoop-hdfs-datanode start
+  sleep 10
+  hadoop fsck /
+  /usr/lib/hadoop/libexec/init-hdfs.sh
+fi
 ## install Jupyterhub
-apt-get -y install npm nodejs-legacy python3-pip
-npm install -g configurable-http-proxy
-pip3 install jupyterhub ipython[notebook]
+if [ ! -f /usr/local/bin/jupyter ]; then
+  apt-get -y install npm nodejs-legacy python3-pip
+  npm install -g configurable-http-proxy
+  pip3 install jupyterhub ipython[notebook]
+fi
 ### SSH key exchange
-mkdir -p /root/.ssh
-ssh-keygen -P "" -t rsa -f /root/.ssh/id_rsa
-cat /root/.ssh/id_rsa.pub >> /root/.ssh/authorized_keys
-sed -i 's#\#   StrictHostKeyChecking ask#    StrictHostKeyChecking no#g' /etc/ssh/ssh_config
+if [ ! -f /root/.ssh/id_rsa ]; then
+  mkdir -p /root/.ssh
+  ssh-keygen -P "" -t rsa -f /root/.ssh/id_rsa
+  cat /root/.ssh/id_rsa.pub >> /root/.ssh/authorized_keys
+  sed -i 's#\#   StrictHostKeyChecking ask#    StrictHostKeyChecking no#g' /etc/ssh/ssh_config
+fi

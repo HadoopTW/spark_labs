@@ -17,6 +17,7 @@ Vagrant.configure(2) do |config|
   config.vm.provider "virtualbox" do |vb|
     # Customize the amount of memory on the VM:
     vb.memory = "6144"
+    vb.name   = "spark-labs"
   end
 
   # Enable provisioning with a shell script. Additional provisioners such as
