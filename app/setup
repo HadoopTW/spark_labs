@@ -6,7 +6,7 @@ wget -O - "http://dl.bintray.com/sbt/debian/Release.gpg" | apt-key add -
 ## setup CDH5 and CM5 repository GPG Key
 wget -O - "http://archive.cloudera.com/cdh5/ubuntu/trusty/amd64/cdh/archive.key" | apt-key add -
 ## setup Oracle JDK 8 repository
-echo "deb http://ppa.launchpad.net/webupd8team/java/ubuntu trusty main" > /etc/apt/sources.list.d/webupd8team-java-trusty.list
+# echo "deb http://ppa.launchpad.net/webupd8team/java/ubuntu trusty main" > /etc/apt/sources.list.d/webupd8team-java-trusty.list
 ## update APT repositories
 apt-get update
 ##----------------------------------------------------------------------------
@@ -57,11 +57,11 @@ if [ ! -d /etc/puppet/modules/cloudera/ ]; then
 fi
 ## install Hadoop, Hive, Hue
 cat << EOF > site.pp
-class { '::cloudera::cm5::repo': }    ->
-class { '::cloudera::cdh5::hadoop': } ->
-class { '::cloudera::cdh5::hive': }   ->
-class { '::cloudera::cdh5::hive::metastore': }   ->
-class { '::cloudera::cdh5::hue': }
+class { '::cloudera::cdh5::repo': }
+class { '::cloudera::cm5::repo': }
+class { '::cloudera::java5': }
+class { '::cloudera::cdh5::hadoop': }
+class { '::cloudera::cdh5::spark': }
 EOF
 puppet apply --verbose --debug site.pp
 if [ ! -f /etc/hadoop/conf.pseudo/core-site.xml ]; then
